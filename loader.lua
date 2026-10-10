@@ -3,7 +3,9 @@ local BASE = "https://raw.githubusercontent.com/pablocachorreira165-sudo/Metropo
 
 local function carregar(nome)
     local ok, err = pcall(function()
-        loadstring(game:HttpGet(BASE .. nome .. ".lua"))()
+        local code = game:HttpGet(BASE .. nome .. ".lua")
+        local func = loadstring(code)
+        if func then func() end
     end)
     if ok then
         print("[HUB] " .. nome .. " ok")
