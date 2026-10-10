@@ -1,4 +1,3 @@
--- loader.lua | Metropole-hub
 local BASE = "https://raw.githubusercontent.com/pablocachorreira165-sudo/Metropole-hub/main/"
 
 local function carregar(nome)
@@ -7,24 +6,25 @@ local function carregar(nome)
         local func = loadstring(code)
         if func then func() end
     end)
-    if ok then
-        print("[HUB] " .. nome .. " ok")
-    else
-        warn("[HUB] erro em " .. nome .. ": " .. tostring(err))
-    end
+    if ok then print("[HUB] " .. nome .. " ok")
+    else warn("[HUB] erro em " .. nome .. ": " .. tostring(err)) end
 end
 
 task.spawn(function()
     carregar("esp")
-    task.wait(0.5)
+    task.wait(0.4)
     carregar("aim")
-    task.wait(0.5)
+    task.wait(0.4)
     carregar("movement")
-    task.wait(0.5)
+    task.wait(0.4)
     carregar("world")
-    task.wait(0.5)
+    task.wait(0.4)
+    carregar("utility")
+    task.wait(0.4)
+    carregar("farm")
+    task.wait(0.4)
     carregar("uilib")
-    task.wait(0.5)
+    task.wait(0.4)
     carregar("menu")
     task.wait(0.3)
     print("[HUB] tudo carregado")
