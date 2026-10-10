@@ -18,11 +18,13 @@ end
 
 local Window = UILib:CreateWindow({Title = "Delta Hub", Author = "Metrópole RP"})
 
+-- SEGURANCA
 local tabSafe = Window:CreateTab("Seguranca")
 tabSafe:Toggle("Modo Seguro", "Desliga Speed/Fly/Noclip quando alguem chega perto", MOVE.safe_mode, function(v) MOVE.safe_mode = v end)
 tabSafe:Slider("Raio Deteccao", "Distancia em studs", 20, 300, MOVE.safe_radius, 10, function(v) MOVE.safe_radius = v end)
 tabSafe:Paragraph("Quando um player entra no raio, Speed/Fly/Noclip desligam sozinhos.")
 
+-- COMBAT
 local tabCombat = Window:CreateTab("Combat")
 tabCombat:Toggle("Aimbot", "Mira automatica", AIM.ativo, function(v) AIM.ativo = v end)
 tabCombat:Toggle("Team Check", "Ignora aliados", AIM.team_check, function(v) AIM.team_check = v end)
@@ -46,6 +48,7 @@ tabCombat:Slider("Aim FOV", "Raio em graus", 5, 90, AIM.fov, 5, function(v) AIM.
 tabCombat:Slider("Smoothing", "0-100", 0, 100, math.floor(AIM.smoothing*100), 5, function(v) AIM.smoothing = v/100 end)
 tabCombat:Slider("Distancia Max", "Studs", 100, 2000, AIM.max_dist, 100, function(v) AIM.max_dist = v end)
 
+-- ESP
 local tabESP = Window:CreateTab("ESP")
 tabESP:Toggle("Box", "Caixa em volta", ESP.box, function(v) ESP.box = v end)
 tabESP:Toggle("Line", "Linha ate o alvo", ESP.line, function(v) ESP.line = v end)
@@ -53,6 +56,7 @@ tabESP:Toggle("Name", "Nome em cima", ESP.name, function(v) ESP.name = v end)
 tabESP:Toggle("Distance", "Distancia em metros", ESP.dist, function(v) ESP.dist = v end)
 tabESP:Toggle("Chams", "Contorno colorido", ESP.chams, function(v) ESP.chams = v end)
 
+-- MOVEMENT
 local tabMove = Window:CreateTab("Movement")
 tabMove:Toggle("Speed Hack", "Anda mais rapido", MOVE.speed_on, function(v) MOVE.speed_on = v end)
 tabMove:Slider("Speed", "Padrao 12", 12, 100, MOVE.speed, 2, function(v) MOVE.speed = v end)
@@ -61,22 +65,45 @@ tabMove:Slider("Fly Speed", "20-200", 20, 200, MOVE.fly_speed, 5, function(v) MO
 tabMove:Toggle("Noclip", "Atravessa paredes", MOVE.noclip, function(v) MOVE.noclip = v end)
 tabMove:Toggle("Infinite Jump", "Pula infinito", MOVE.inf_jump, function(v) MOVE.inf_jump = v end)
 
+-- WORLD
 local tabWorld = Window:CreateTab("World")
 tabWorld:Toggle("Fullbright", "Ilumina o mapa", WORLD.fullbright, function(v) WORLD.fullbright = v end)
 tabWorld:Toggle("No Fog", "Remove neblina", WORLD.no_fog, function(v) WORLD.no_fog = v end)
 tabWorld:Slider("Hora", "0-24", 0, 24, WORLD.hora, 1, function(v) WORLD.hora = v end)
 
+-- UTIL
 if UTIL then
     local tabUtil = Window:CreateTab("Util")
     tabUtil:Toggle("Anti-AFK", "Nao kicka por inatividade", UTIL.anti_afk, function(v) UTIL.anti_afk = v end)
     tabUtil:Toggle("Coordenadas", "X Y Z na tela", UTIL.coords, function(v) UTIL.coords = v end)
     tabUtil:Slider("FOV camera", "40-120", 40, 120, UTIL.fov, 5, function(v) UTIL.fov = v end)
-    tabUtil:Button("Salvar Posicao", function() if getgenv().UTIL_SALVAR() then print("[UTIL] pos salva") end end)
-    tabUtil:Button("Voltar Posicao", function() if getgenv().UTIL_VOLTAR() then print("[UTIL] teleportado") end end)
-    tabUtil:Button("Salvar Config", function() if getgenv().UTIL_SALVAR_CONFIG() then print("[UTIL] salva") end end)
-    tabUtil:Button("Carregar Config", function() if getgenv().UTIL_CARREGAR_CONFIG() then print("[UTIL] carregada") end end)
+
+    -- TP pra player
+    local ddTP = tabUtil:Dropdown("TP pra Player", listarPlayers(), false, function(sel)
+        for nome, _ in pairs(sel) do
+            if getgenv().UTIL_TP_PLAYER then
+                getgenv().UTIL_TP_PLAYER(nome)
+            end
+        end
+    end)
+    Players.PlayerAdded:Connect(function() task.wait(1) if ddTP then ddTP:refresh(listarPlayers()) end end)
+    Players.PlayerRemoving:Connect(function() task.wait(0.5) if ddTP then ddTP:refresh(listarPlayers()) end end)
+
+    tabUtil:Button("Salvar Posicao", function()
+        if getgenv().UTIL_SALVAR() then print("[UTIL] pos salva") end
+    end)
+    tabUtil:Button("Voltar Posicao", function()
+        if getgenv().UTIL_VOLTAR() then print("[UTIL] teleportado") end
+    end)
+    tabUtil:Button("Salvar Config", function()
+        if getgenv().UTIL_SALVAR_CONFIG() then print("[UTIL] salva") end
+    end)
+    tabUtil:Button("Carregar Config", function()
+        if getgenv().UTIL_CARREGAR_CONFIG() then print("[UTIL] carregada") end
+    end)
 end
 
+-- FARM
 if FARM then
     local tabFarm = Window:CreateTab("Farm")
     tabFarm:Toggle("Auto Prompt", "Dispara ProximityPrompt automatico", FARM.auto_prompt, function(v) FARM.auto_prompt = v end)
@@ -85,5 +112,6 @@ if FARM then
     tabFarm:Slider("Delay x10", "Espera entre acoes", 1, 20, FARM.delay*10, 1, function(v) FARM.delay = v/10 end)
 end
 
+-- INFO
 local tabInfo = Window:CreateTab("Info")
 tabInfo:Paragraph("Delta Hub\nAutor: pablocachorreira165\n\nSeguranca:\nSpeed: 16-25\nFly: area privada\nNoclip: sozinho\nESP/Aimbot: baixo risco")
