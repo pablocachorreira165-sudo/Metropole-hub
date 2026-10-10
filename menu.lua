@@ -1,117 +1,150 @@
--- menu.lua | Menu do Metrópole Hub usando MinhaUILib
-local UILib = getgenv().MinhaUILib
-if not UILib then warn("[MENU] UILib nao carregou"); return end
+--[[
+    menu.lua - Interface para Metrópole RP
+    Usa MinhaUILib criada anteriormente
+]]
 
-local Players = game:GetService("Players")
-local LP = Players.LocalPlayer
+if not getgenv().MinhaUILib then
+    warn("[HUB] MinhaUILib não encontrada. Carregue a uilib.lua primeiro!")
+    return
+end
+
+if not getgenv().AIM_CFG then
+    warn("[HUB] AIM_CFG não encontrada!")
+    return
+end
+
+if not getgenv().ESP_CFG then
+    warn("[HUB] ESP_CFG não encontrada!")
+    return
+end
+
+if not getgenv().MOVE_CFG then
+    warn("[HUB] MOVE_CFG não encontrada!")
+    return
+end
+
+if not getgenv().WORLD_CFG then
+    warn("[HUB] WORLD_CFG não encontrada!")
+    return
+end
 
 local AIM = getgenv().AIM_CFG
 local ESP = getgenv().ESP_CFG
 local MOVE = getgenv().MOVE_CFG
 local WORLD = getgenv().WORLD_CFG
 
-if not (AIM and ESP and MOVE and WORLD) then
-    warn("[MENU] configs nao carregaram")
-    return
-end
+local Players = game:GetService("Players")
+local LocalPlayer = Players.LocalPlayer
 
-local Window = UILib:CreateWindow({
-    Title = "Metrópole Hub",
-    Author = "pablocachorreira165",
+-- Cria a janela (corrigido: dois pontos + tabela)
+local Janela = getgenv().MinhaUILib:CreateWindow({
+    Title = "Delta Hub",
+    Author = "Metrópole RP",
 })
 
--- ============ SEGURANCA ============
-local tabSafe = Window:CreateTab("Segurança")
+-- Botao flutuante: NAO precisa chamar (a uilib ja cria sozinha)
 
-tabSafe:Toggle("Modo Seguro",
-    "Desliga Speed/Fly/Noclip quando alguem chega perto",
-    MOVE.safe_mode,
-    function(v) MOVE.safe_mode = v end
-)
+-- ============================================================
+-- ABA SEGURANÇA
+-- ============================================================
+local AbaSeguranca = Janela:CreateTab("Segurança")
 
-tabSafe:Slider("Raio de Detecção",
-    "Distancia em studs",
-    20, 300,
-    MOVE.safe_radius,
-    10,
-    function(v) MOVE.safe_radius = v end
-)
+AbaSeguranca:Toggle("Modo Seguro", "Ativa proteção automática", MOVE.safe_mode, function(valor)
+    MOVE.safe_mode = valor
+end)
 
-tabSafe:Paragraph("Quando um player entra no raio, Speed, Fly e Noclip desligam sozinhos. Quando ele sai, voltam ao normal.")
+AbaSeguranca:Slider("Raio de Detecção", "Distância para detectar ameaças", 20, 300, MOVE.safe_radius, 10, function(valor)
+    MOVE.safe_radius = valor
+end)
 
--- ============ COMBAT ============
-local tabCombat = Window:CreateTab("Combat")
+AbaSeguranca:Paragraph("O modo seguro monitora jogadores próximos e reage a possíveis ameaças automaticamente.")
 
-tabCombat:Toggle("Aimbot", "Mira automatica", AIM.ativo, function(v) AIM.ativo = v end)
-tabCombat:Toggle("Team Check", "Ignora aliados", AIM.team_check, function(v) AIM.team_check = v end)
+-- ============================================================
+-- ABA COMBAT
+-- ============================================================
+local AbaCombat = Janela:CreateTab("Combat")
 
-local function listarPlayers()
+AbaCombat:Toggle("Aimbot", "Ativa mira automática", AIM.ativo, function(valor)
+    AIM.ativo = valor
+end)
+
+AbaCombat:Toggle("Team Check", "Não mira em aliados", AIM.team_check, function(valor)
+    AIM.team_check = valor
+end)
+
+local function obterJogadores()
     local lista = {}
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p ~= LP then table.insert(lista, p.Name) end
+    for _, jogador in ipairs(Players:GetPlayers()) do
+        if jogador ~= LocalPlayer then
+            table.insert(lista, jogador.Name)
+        end
     end
     return lista
 end
 
-local dropdown = tabCombat:Dropdown("Amigos (não mirar)", listarPlayers(), true, function(sel)
-    AIM.amigos = {}
-    for nome, _ in pairs(sel) do
-        AIM.amigos[nome] = true
-    end
+local DropdownAmigos = AbaCombat:Dropdown("Amigos (não mirar)", obterJogadores(), true, function(selecionados)
+    AIM.amigos = selecionados
 end)
 
 Players.PlayerAdded:Connect(function()
     task.wait(1)
-    if dropdown then dropdown:refresh(listarPlayers()) end
+    DropdownAmigos:refresh(obterJogadores())
 end)
+
 Players.PlayerRemoving:Connect(function()
-    task.wait(0.5)
-    if dropdown then dropdown:refresh(listarPlayers()) end
+    task.wait(1)
+    DropdownAmigos:refresh(obterJogadores())
 end)
 
-tabCombat:Slider("Aim FOV", "Raio em graus", 5, 90, AIM.fov, 5,
-    function(v) AIM.fov = v end)
+AbaCombat:Slider("Aim FOV", "Campo de visão da mira", 5, 90, AIM.fov, 5, function(valor)
+    AIM.fov = valor
+end)
 
-tabCombat:Slider("Smoothing", "0 = instantaneo, 100 = suave", 0, 100,
-    math.floor(AIM.smoothing * 100), 5,
-    function(v) AIM.smoothing = v / 100 end)
+AbaCombat:Slider("Smoothing", "Suavidade da mira (0-1)", 0, 100, AIM.smoothing * 100, 5, function(valor)
+    AIM.smoothing = valor / 100
+end)
 
-tabCombat:Slider("Distância Máxima", "Studs", 100, 2000, AIM.max_dist, 100,
-    function(v) AIM.max_dist = v end)
+AbaCombat:Slider("Distância Máxima", "Alcance máximo da mira", 100, 2000, AIM.max_dist, 100, function(valor)
+    AIM.max_dist = valor
+end)
 
--- ============ ESP ============
-local tabESP = Window:CreateTab("ESP")
+-- ============================================================
+-- ABA ESP
+-- ============================================================
+local AbaESP = Janela:CreateTab("ESP")
 
-tabESP:Toggle("Box", "Caixa em volta", ESP.box, function(v) ESP.box = v end)
-tabESP:Toggle("Line", "Linha ate o alvo", ESP.line, function(v) ESP.line = v end)
-tabESP:Toggle("Name", "Nome em cima", ESP.name, function(v) ESP.name = v end)
-tabESP:Toggle("Distance", "Distancia em metros", ESP.dist, function(v) ESP.dist = v end)
-tabESP:Toggle("Chams", "Contorno colorido", ESP.chams, function(v) ESP.chams = v end)
+AbaESP:Toggle("Box ESP", "Caixa ao redor dos jogadores", ESP.box, function(valor) ESP.box = valor end)
+AbaESP:Toggle("Line ESP", "Linha até os jogadores", ESP.line, function(valor) ESP.line = valor end)
+AbaESP:Toggle("Name ESP", "Mostra nomes", ESP.name, function(valor) ESP.name = valor end)
+AbaESP:Toggle("Distance ESP", "Mostra distância", ESP.dist, function(valor) ESP.dist = valor end)
+AbaESP:Toggle("Chams", "Ver através de paredes", ESP.chams, function(valor) ESP.chams = valor end)
 
--- ============ MOVEMENT ============
-local tabMove = Window:CreateTab("Movement")
+-- ============================================================
+-- ABA MOVEMENT
+-- ============================================================
+local AbaMovement = Janela:CreateTab("Movement")
 
-tabMove:Toggle("Speed Hack", "Anda mais rapido", MOVE.speed_on, function(v) MOVE.speed_on = v end)
-tabMove:Slider("Speed", "Padrao do jogo: 12", 12, 100, MOVE.speed, 2,
-    function(v) MOVE.speed = v end)
+AbaMovement:Toggle("Speed Hack", "Aumenta velocidade", MOVE.speed_on, function(valor) MOVE.speed_on = valor end)
+AbaMovement:Slider("Velocidade", "Velocidade do jogador", 12, 100, MOVE.speed, 2, function(valor) MOVE.speed = valor end)
+AbaMovement:Toggle("Fly", "Ativa modo voo", MOVE.fly, function(valor) MOVE.fly = valor end)
+AbaMovement:Slider("Fly Speed x10", "Velocidade do voo", 5, 50, MOVE.fly_speed * 10, 1, function(valor) MOVE.fly_speed = valor / 10 end)
+AbaMovement:Toggle("Noclip", "Atravessa paredes", MOVE.noclip, function(valor) MOVE.noclip = valor end)
+AbaMovement:Toggle("Infinite Jump", "Pulo infinito", MOVE.inf_jump, function(valor) MOVE.inf_jump = valor end)
 
-tabMove:Toggle("Fly", "Use os botoes na tela", MOVE.fly, function(v) MOVE.fly = v end)
-tabMove:Slider("Fly Speed x10", "1 = lento, 50 = rapido", 5, 50,
-    math.floor(MOVE.fly_speed * 10), 1,
-    function(v) MOVE.fly_speed = v / 10 end)
+-- ============================================================
+-- ABA WORLD
+-- ============================================================
+local AbaWorld = Janela:CreateTab("World")
 
-tabMove:Toggle("Noclip", "Atravessa paredes", MOVE.noclip, function(v) MOVE.noclip = v end)
-tabMove:Toggle("Infinite Jump", "Pula quantas vezes quiser", MOVE.inf_jump, function(v) MOVE.inf_jump = v end)
+AbaWorld:Toggle("Fullbright", "Ilumina todo o mapa", WORLD.fullbright, function(valor) WORLD.fullbright = valor end)
+AbaWorld:Toggle("No Fog", "Remove névoa", WORLD.no_fog, function(valor) WORLD.no_fog = valor end)
+AbaWorld:Slider("Hora do Dia", "Altera hora do jogo", 0, 24, WORLD.hora, 1, function(valor) WORLD.hora = valor end)
 
--- ============ WORLD ============
-local tabWorld = Window:CreateTab("World")
+-- ============================================================
+-- ABA INFO
+-- ============================================================
+local AbaInfo = Janela:CreateTab("Info")
 
-tabWorld:Toggle("Fullbright", "Ilumina o mapa", WORLD.fullbright, function(v) WORLD.fullbright = v end)
-tabWorld:Toggle("No Fog", "Remove a neblina", WORLD.no_fog, function(v) WORLD.no_fog = v end)
-tabWorld:Slider("Hora do dia", "0 = meia-noite", 0, 24, WORLD.hora, 1,
-    function(v) WORLD.hora = v end)
+AbaInfo:Paragraph("Delta Hub v1.0\n\nHub completo para Metrópole RP\nFeito com MinhaUILib\n\nUse com responsabilidade")
 
--- ============ INFO ============
-local tabInfo = Window:CreateTab("Info")
-
-tabInfo:Paragraph("Metrópole Hub\nAutor: pablocachorreira165\n\nDicas:\nSpeed: 16-25 seguro\nFly: use em area privada\nNoclip: cuidado com players por perto\nESP e Aimbot: baixo risco")
+print("[HUB] Menu carregado com sucesso!")
