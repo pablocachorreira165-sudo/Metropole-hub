@@ -54,6 +54,7 @@ RunService.Heartbeat:Connect(function()
     elseif not CFG.anti_afk and conn_afk then setAntiAFK(false) end
 end)
 
+-- SALVAR/VOLTAR POSICAO
 getgenv().UTIL_SALVAR = function()
     local r = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
     if r then CFG.pos_salva = r.CFrame return true end
@@ -64,6 +65,30 @@ getgenv().UTIL_VOLTAR = function()
     if r and CFG.pos_salva then r.CFrame = CFG.pos_salva return true end
     return false
 end
+
+-- TP PRA PLAYER
+getgenv().UTIL_TP_PLAYER = function(nome)
+    if not nome or nome == "" then return false end
+    local alvo = Players:FindFirstChild(nome)
+    if not alvo then return false end
+    local hrp = alvo.Character and alvo.Character:FindFirstChild("HumanoidRootPart")
+    local meu = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
+    if not hrp or not meu then return false end
+    -- teleporta 3 studs pro lado do alvo (evita colisão)
+    meu.CFrame = CFrame.new(hrp.Position + hrp.CFrame.RightVector * 3)
+    return true
+end
+
+-- LISTA DE PLAYERS
+getgenv().UTIL_LISTAR = function()
+    local l = {}
+    for _, p in ipairs(Players:GetPlayers()) do
+        if p ~= LP then table.insert(l, p.Name) end
+    end
+    return l
+end
+
+-- SALVAR/CARREGAR CONFIG
 getgenv().UTIL_SALVAR_CONFIG = function()
     if not writefile then return false end
     local d = "fov="..CFG.fov
