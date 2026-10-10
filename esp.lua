@@ -1,147 +1,175 @@
--- esp.lua | Modulo de ESP
+-- esp.lua | ESP v2 (ScreenGui Frames, sempre visivel)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Camera = workspace.CurrentCamera
 local LP = Players.LocalPlayer
 
-local CFG = getgenv().ESP_CFG or {
-    box = false, line = false, name = false, dist = false, chams = false,
-    cor = Color3.fromRGB(0, 255, 100)
-}
-getgenv().ESP_CFG = CFG
+local CFG = getgenv().ESP_CFG
+if not CFG then
+    CFG = { box = false, line = false, name = false, dist = false, chams = false,
+        cor = Color3.fromRGB(0, 255, 100), max_dist = 500 }
+    getgenv().ESP_CFG = CFG
+end
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "MetropoleESP"
 gui.ResetOnSpawn = false
 gui.IgnoreGuiInset = true
 gui.DisplayOrder = 100
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.Parent = LP:WaitForChild("PlayerGui")
 
-local objs = {}
+local slots = {}
 
-local function criar(plr)
-    local c = plr.Character
-    if not c then return end
-    local lista = {}
+local function criarSlot(plr)
+    if slots[plr] then return slots[plr] end
+    local s = {}
 
-    if CFG.chams then
-        local hl = Instance.new("Highlight")
-        hl.FillColor = CFG.cor
-        hl.OutlineColor = Color3.fromRGB(255, 255, 255)
-        hl.FillTransparency = 0.5
-        hl.Parent = c
-        table.insert(lista, hl)
-    end
+    s.box = Instance.new("Frame")
+    s.box.BackgroundTransparency = 1
+    s.box.BorderSizePixel = 0
+    s.box.Visible = false
+    s.box.ZIndex = 50
+    s.box.Parent = gui
+    s.stroke = Instance.new("UIStroke")
+    s.stroke.Color = CFG.cor
+    s.stroke.Thickness = 1.5
+    s.stroke.Parent = s.box
 
-    local head = c:FindFirstChild("Head")
-    if head then
-        if CFG.box then
-            local bg = Instance.new("BillboardGui")
-            bg.Name = "box"
-            bg.Size = UDim2.new(2.5, 0, 3.5, 0)
-            bg.StudsOffset = Vector3.new(0, 2, 0)
-            bg.AlwaysOnTop = false
-            bg.Parent = head
-            local b = Instance.new("Frame")
-            b.Size = UDim2.new(1, 0, 1, 0)
-            b.BackgroundTransparency = 1
-            b.Parent = bg
-            local st = Instance.new("UIStroke")
-            st.Color = CFG.cor
-            st.Thickness = 1.5
-            st.Parent = b
-            table.insert(lista, bg)
-        end
+    s.info = Instance.new("TextLabel")
+    s.info.BackgroundTransparency = 1
+    s.info.TextColor3 = CFG.cor
+    s.info.TextStrokeTransparency = 0
+    s.info.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
+    s.info.TextSize = 13
+    s.info.Font = Enum.Font.GothamBold
+    s.info.TextXAlignment = Enum.TextXAlignment.Center
+    s.info.Visible = false
+    s.info.ZIndex = 51
+    s.info.Parent = gui
 
-        if CFG.name or CFG.dist then
-            local bg2 = Instance.new("BillboardGui")
-            bg2.Name = "info"
-            bg2.Size = UDim2.new(0, 180, 0, 16)
-            bg2.StudsOffset = Vector3.new(0, 4.5, 0)
-            bg2.AlwaysOnTop = true
-            bg2.LightInfluence = 0
-            bg2.Parent = head
-            local txt = Instance.new("TextLabel")
-            txt.Size = UDim2.new(1, 0, 1, 0)
-            txt.BackgroundTransparency = 1
-            txt.TextColor3 = CFG.cor
-            txt.TextStrokeTransparency = 0
-            txt.TextStrokeColor3 = Color3.fromRGB(0, 0, 0)
-            txt.TextScaled = false
-            txt.TextSize = 14
-            txt.Font = Enum.Font.GothamBold
-            txt.Text = plr.Name
-            txt.Parent = bg2
-            table.insert(lista, bg2)
-        end
-    end
+    s.line = Instance.new("Frame")
+    s.line.BorderSizePixel = 0
+    s.line.BackgroundColor3 = CFG.cor
+    s.line.AnchorPoint = Vector2.new(0, 0.5)
+    s.line.Position = UDim2.new(0.5, 0, 0.5, 0)
+    s.line.Visible = false
+    s.line.ZIndex = 49
+    s.line.Parent = gui
 
-    objs[plr] = lista
+    slots[plr] = s
+    return s
 end
 
-local linhas = {}
+local function removerSlot(plr)
+    local s = slots[plr]
+    if not s then return end
+    pcall(function() s.box:Destroy() end)
+    pcall(function() s.info:Destroy() end)
+    pcall(function() s.line:Destroy() end)
+    slots[plr] = nil
+end
 
-RunService.Heartbeat:Connect(function()
+local chams = {}
+
+local function atualizarChams(plr, char)
+    if CFG.chams and char then
+        if not chams[plr] or chams[plr].Parent ~= char then
+            if chams[plr] then chams[plr]:Destroy() end
+            local hl = Instance.new("Highlight")
+            hl.FillColor = CFG.cor
+            hl.OutlineColor = Color3.fromRGB(255, 255, 255)
+            hl.FillTransparency = 0.6
+            hl.OutlineTransparency = 0
+            hl.Parent = char
+            chams[plr] = hl
+        end
+    else
+        if chams[plr] then chams[plr]:Destroy() chams[plr] = nil end
+    end
+end
+
+Players.PlayerRemoving:Connect(function(plr)
+    removerSlot(plr)
+    if chams[plr] then chams[plr]:Destroy() chams[plr] = nil end
+end)
+
+RunService.RenderStepped:Connect(function()
+    local vp = Camera.ViewportSize
+
     for _, plr in ipairs(Players:GetPlayers()) do
         if plr == LP then continue end
-        local c = plr.Character
-        local h = c and c:FindFirstChildOfClass("Humanoid")
-        if not c or not h or h.Health <= 0 then
-            if objs[plr] then
-                for _, o in ipairs(objs[plr]) do if o then o:Destroy() end end
-                objs[plr] = nil
-            end
+
+        local char = plr.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        local head = char and char:FindFirstChild("Head")
+
+        if not char or not hum or hum.Health <= 0 or not hrp or not head then
+            local s = slots[plr]
+            if s then s.box.Visible = false; s.info.Visible = false; s.line.Visible = false end
+            if chams[plr] then chams[plr]:Destroy() chams[plr] = nil end
             continue
         end
-        if not objs[plr] then criar(plr) end
 
-        local lista = objs[plr]
-        if lista then
-            for _, o in ipairs(lista) do
-                if o and o.Name == "info" then
-                    local t = o:FindFirstChildOfClass("TextLabel")
-                    if t then
-                        local p = {}
-                        if CFG.name then table.insert(p, plr.Name) end
-                        if CFG.dist then
-                            local hrp = LP.Character and LP.Character:FindFirstChild("HumanoidRootPart")
-                            local tr = c:FindFirstChild("HumanoidRootPart")
-                            if hrp and tr then
-                                table.insert(p, math.floor((hrp.Position - tr.Position).Magnitude) .. "m")
-                            end
-                        end
-                        t.Text = table.concat(p, " | ")
-                    end
-                end
-            end
+        local dist = (Camera.CFrame.Position - hrp.Position).Magnitude
+        if dist > (CFG.max_dist or 500) then
+            local s = slots[plr]
+            if s then s.box.Visible = false; s.info.Visible = false; s.line.Visible = false end
+            continue
         end
-    end
 
-    for _, l in ipairs(linhas) do if l then l:Destroy() end end
-    linhas = {}
+        local headPos, headOn = Camera:WorldToViewportPoint(head.Position)
+        local hrpPos, hrpOn = Camera:WorldToViewportPoint(hrp.Position)
 
-    if CFG.line then
-        local vp = Camera.ViewportSize
-        for _, plr in ipairs(Players:GetPlayers()) do
-            if plr == LP then continue end
-            local c = plr.Character
-            local hd = c and c:FindFirstChild("Head")
-            if not hd then continue end
-            local pos, on = Camera:WorldToScreenPoint(hd.Position)
-            if not on then continue end
-            local orig = Vector2.new(vp.X/2, vp.Y)
-            local diff = Vector2.new(pos.X, pos.Y) - orig
-            local lin = Instance.new("Frame")
-            lin.Size = UDim2.new(0, diff.Magnitude, 0, 1)
-            lin.Position = UDim2.new(0.5, 0, 1, 0)
-            lin.AnchorPoint = Vector2.new(0, 0.5)
-            lin.Rotation = math.deg(math.atan2(diff.Y, diff.X))
-            lin.BackgroundColor3 = CFG.cor
-            lin.BorderSizePixel = 0
-            lin.Parent = gui
-            table.insert(linhas, lin)
+        if not headOn or not hrpOn then
+            local s = slots[plr]
+            if s then s.box.Visible = false; s.info.Visible = false; s.line.Visible = false end
+            continue
         end
+
+        local s = criarSlot(plr)
+
+        -- tamanho do box baseado na distancia (px por stud)
+        local fov_rad = math.rad(Camera.FieldOfView)
+        local px_per_stud = (vp.Y / 2) / (math.tan(fov_rad / 2) * dist)
+        local box_h = 5 * px_per_stud
+        local box_w = box_h * 0.55
+
+        s.box.Size = UDim2.new(0, box_w, 0, box_h)
+        s.box.Position = UDim2.new(0, hrpPos.X - box_w / 2, 0, hrpPos.Y - box_h / 2)
+        s.box.Visible = CFG.box
+        s.stroke.Color = CFG.cor
+
+        -- info (nome + distancia)
+        local texto = ""
+        if CFG.name then texto = plr.Name end
+        if CFG.dist then
+            if texto ~= "" then texto = texto .. "  " end
+            texto = texto .. math.floor(dist) .. "m"
+        end
+        s.info.Text = texto
+        s.info.Size = UDim2.new(0, 250, 0, 16)
+        s.info.Position = UDim2.new(0, hrpPos.X - 125, 0, hrpPos.Y - box_h / 2 - 20)
+        s.info.Visible = (CFG.name or CFG.dist)
+        s.info.TextColor3 = CFG.cor
+
+        -- line: do centro da tela (crosshair) ate o alvo
+        if CFG.line then
+            local orig = Vector2.new(vp.X / 2, vp.Y / 2)
+            local alvo2 = Vector2.new(headPos.X, headPos.Y)
+            local diff = alvo2 - orig
+            s.line.Size = UDim2.new(0, diff.Magnitude, 0, 1)
+            s.line.Position = UDim2.new(0.5, 0, 0.5, 0)
+            s.line.Rotation = math.deg(math.atan2(diff.Y, diff.X))
+            s.line.BackgroundColor3 = CFG.cor
+            s.line.Visible = true
+        else
+            s.line.Visible = false
+        end
+
+        atualizarChams(plr, char)
     end
 end)
 
-print("[ESP] carregado")
+print("[ESP] carregado v2")
