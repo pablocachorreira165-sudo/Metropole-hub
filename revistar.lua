@@ -1,7 +1,7 @@
--- revistar.lua | Auto /revistar em quem ta perto
+-- revistar.lua | Auto /revistar (TextChatService - chat novo)
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local Workspace = workspace
+local TCS = game:GetService("TextChatService")
 local LP = Players.LocalPlayer
 
 local CFG = getgenv().REVISTAR_CFG or {
@@ -16,36 +16,41 @@ if not CFG.ja_revistados then CFG.ja_revistados = {} end
 
 local ultimo_envio = 0
 
--- envia mensagem no chat
-local function enviarChat(msg)
-    local RS = game:GetService("ReplicatedStorage")
-    -- chat antigo (DefaultChatSystemChatEvents)
-    local chatEvents = RS:FindFirstChild("DefaultChatSystemChatEvents")
-    if chatEvents then
-        local sayReq = chatEvents:FindFirstChild("SayMessageRequest")
-        if sayReq then
-            local ok = pcall(function()
-                sayReq:FireServer(msg, "All")
-            end)
-            if ok then return true end
-        end
+-- pega o canal de chat principal
+local function pegarCanal()
+    local tc = TCS:FindFirstChild("TextChannels")
+    if not tc then return nil end
+    -- tenta o general primeiro
+    local geral = tc:FindFirstChild("RBXGeneral")
+    if geral then return geral end
+    -- senao pega o primeiro
+    for _, c in ipairs(tc:GetChildren()) do
+        if c:IsA("TextChannel") then return c end
     end
-    return false
+    return nil
 end
 
--- testa se o chat funciona ao ligar
+-- envia mensagem no chat novo
+local function enviar(msg)
+    local canal = pegarCanal()
+    if not canal then return false end
+    local ok = pcall(function()
+        canal:SendAsync(msg)
+    end)
+    return ok
+end
+
 getgenv().REVISTAR_TESTAR = function()
-    local ok = enviarChat("/revistar")
+    local ok = enviar("teste")
     if ok then
-        print("[REVISTAR] chat OK")
+        print("[REVISTAR] chat OK (TextChatService)")
         return true
     else
-        warn("[REVISTAR] chat nao disponivel (jogo usa TextChatService novo)")
+        print("[REVISTAR] chat falhou")
         return false
     end
 end
 
--- limpa lista (pode revistar de novo)
 getgenv().REVISTAR_LIMPAR = function()
     CFG.ja_revistados = {}
     print("[REVISTAR] lista limpa")
@@ -77,7 +82,7 @@ RunService.Heartbeat:Connect(function()
 
     if melhor then
         local msg = CFG.comando .. " " .. melhor.Name
-        if enviarChat(msg) then
+        if enviar(msg) then
             CFG.ja_revistados[melhor.Name] = true
             ultimo_envio = agora
             print("[REVISTAR] " .. msg)
@@ -85,4 +90,4 @@ RunService.Heartbeat:Connect(function()
     end
 end)
 
-print("[REVISTAR] carregado")
+print("[REVISTAR] carregado v2 (TextChatService)")
